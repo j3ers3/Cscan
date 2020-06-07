@@ -23,7 +23,7 @@ pip3 install -r requirement.txt
 ```
 python3 cscanV2.py -i 192.168.0.1/24 -t 100
 ```
-<img src="./media/15915372292964.jpg" width="800" height="400">
+<img src="./media/15915372292964.jpg" width="500" height="450">
 
 
 - 域名或ip文件扫描
@@ -31,7 +31,7 @@ python3 cscanV2.py -i 192.168.0.1/24 -t 100
 ```
 python3 cscanV2.py -f domain.txt -t 100
 ```
-<img src="./media/15915374071366.jpg" width="800" height="400">
+<img src="./media/15915374071366.jpg" width="600" height="400">
 
 ## ToDo
 - [ ] 优化输出
