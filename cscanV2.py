@@ -8,12 +8,11 @@ import requests
 from time import time
 import asyncio
 from bs4 import BeautifulSoup
-
-
 requests.packages.urllib3.disable_warnings()
 
 __author__ = "whois"
 __update__ = "2020/06/07"
+__version__ = "v2.0.1"
 """
 C段扫描，指定web端口和非web端口，获取标题，版本信息
 
@@ -62,10 +61,11 @@ def banner():
                       ``:::::::::''""" + yellow + """
 
     =================   WEB Info Scan  ==================
-    =================   Code by whois  ==================
+    =================   Code by {0}  ==================
+    =================          {1}  ==================
     +++++++++++++++++++++++++++++++++++++++++++++++++++++
                       
-""" + end)
+""".format(__author__, __version__) + end)
 
 
 def get_info(url):
@@ -85,13 +85,14 @@ def get_info(url):
 
         return info
     except Exception as e:
-        #print(e)
+        print(e)
         pass
 
 
 # 将域名转化为ip
 def url_to_ip(url):
     domain = url.split('/')[0] if '://' not in url else url.split('//')[1].split('/')[0]
+    domain = domain.split(':')[0] if ':' in domain else domain  # fix domain
     try:
         ip = gethostbyname(domain)
         return ip
@@ -169,6 +170,13 @@ async def scan(mode, x, t):
             tasks.append(asyncio.create_task(connet(ip, sem)))
         await asyncio.wait(tasks)
 
+    '''
+    文件格式支持ip、域名
+    1.1.1.1:80
+    baidu.com:443
+    http:/1.1.1.1
+    http://www.baidu.com
+    '''
     if mode == 'file':
         with open(x, 'r') as f:
             for line in f.readlines():
@@ -179,12 +187,13 @@ async def scan(mode, x, t):
                     
         await asyncio.wait(tasks)
 
-    print(blue + "\nFound {0} ports in {1} seconds\n".format(count, time() - time_start))
+    print(blue + "\nFound {0} in {1} seconds\n".format(count, time() - time_start))
 
 
 
-if __name__ == '__main__':
+def main():
     banner()
+
     parser = argparse.ArgumentParser(
         usage='\ncscan -i 192.168.0.1/24 -t 100\ncscan -f url.txt -t 100',
         description="CScan V2",
@@ -210,3 +219,7 @@ if __name__ == '__main__':
         
     if args.file:
         asyncio.run(scan('file', args.file, args.threads))
+
+
+if __name__ == '__main__':
+    main()
