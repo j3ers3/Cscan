@@ -13,27 +13,41 @@ git clone https://github.com/j3ers3/Cscan
 pip3 install -r requirement.txt
 ```
 
-## 2. 配置端口
+## 2. 配置端口（可选）
 - web端口： `Ports_web = [80, 8080]`
 - 非web端口：`Ports_other = [21, 22, 3306]`
 
 
 ## 3. Usage
-- C段扫描模式
+- 普通扫描
 
 ```python
-python3 cscanV2.py -i 192.168.0.1/24 -t 100
+python3 cscanV2.py -i 192.168.0.1/24
 ```
-<img src="./media/15915372292964.jpg" width="500" height="450">
+![-w818](media/16053501531691.jpg)
 
-
-- 域名或ip文件扫描
+- 只扫描web端口，并使用安静模式
 
 ```python
-python3 cscanV2.py -f domain.txt -t 100
+python3 cscanV2.py -i 192.168.0.1/24 -t 100 -web -q
 ```
-<img src="./media/15915374071366.jpg" width="600" height="400">
 
-## 4. ToDo
-- [ ] 优化输出
-- [ ] 增加IP反查
+- 扫描web端口，并指定路径来发现敏感信息
+
+```python
+python3 cscanV2.py -i 192.168.0.1/24 -web -path /phpinfo.php 
+python3 cscanV2.py -f domain.txt -web -path /phpinfo.php 
+```
+
+![-w938](media/16053499858114.jpg)
+
+![-w938](media/16053498949374.jpg)
+
+
+## 4. ChangeLog
+#### v2.1.0 
+- 增加`-path`指定路径扫描
+- 增加`-web`只扫描web端口
+- 增加`-q`安静模式
+- 做了一些优化输出
+- 修复了http头信息错误

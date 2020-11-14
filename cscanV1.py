@@ -28,11 +28,11 @@ ToDo
     多线程优化
 """
 
-Ports_web = [80, 88, 7001, 8009, 8080, 8443]
+Ports_web = [80, 88, 7001, 8000, 8009, 8888, 8080, 8443]
 # Ports_web = [80, 81, 82, 88, 89, 443, 5000, 5001, 7001, 7070, 7777, 7788, 8000, 8001, 8002, 8008, 8080, 8081, 8088, 8089, 8090, 8443, 8888, 8899]
 
 # Ports_other = []
-Ports_other = [22, 445, 1433, 1434, 1521, 3306, 3389]
+Ports_other = [21, 22, 445, 1433, 1434, 1521, 3306, 3389, 6379]
 
 Ports = Ports_other + Ports_web
 
@@ -76,6 +76,7 @@ def banner():
 
     =================   WEB Info Scan  ==================
     =================   Code by whois  ==================
+    =================          v1.2    ==================
     +++++++++++++++++++++++++++++++++++++++++++++++++++++
                       
 """ + end)
@@ -124,11 +125,8 @@ def do_cscan(ip):
                 info = blue + "open" + end
 
             else:
-                if port in [443, 8443]:
-                    protocol = "https"
-                    url = "https://" + str(ip)
-                else:
-                    protocol = "http"
+                protocol = "http" if port not in [443, 8443] else "https"
+                url = "{0}://{1}:{2}".format(protocol, ip, port)
 
                 url = "{protocol}://{ip}:{port}".format(protocol=protocol, ip=ip, port=port)
 
@@ -238,6 +236,7 @@ if __name__ == '__main__':
         exit(0)
 
     if args.ips:
+        print(yellow + 'Target: ' + blue + args.ips + purp + ' | ' + yellow + 'Threads: ' + blue + str(Threads) + end + '\n')
         cscan(args.ips)
 
     if args.file:
