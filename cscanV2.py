@@ -8,18 +8,18 @@ import requests
 from time import time
 import asyncio
 from bs4 import BeautifulSoup
+
 requests.packages.urllib3.disable_warnings()
 
-__author__ = "whois"
-__update__ = "2020/11/01"
-__version__ = "v2.1.0"
+__author__ = "nul1"
+__update__ = "2021/07/01"
+__version__ = "v2.1.1"
 """
 C段扫描，指定web端口和非web端口，获取标题，版本信息
-
 """
 
 Ports_web = [80, 88, 443, 7001, 8000, 8008, 8888, 8080, 8088, 8089, 8161, 9090]
-
+# Ports_web = [8080,6443]
 Ports_other = [21, 22, 445, 1100, 1433, 1434, 1521, 3306, 3389, 6379, 8009, 9200, 11211, 27017, 50070]
 
 COUNT = 0
@@ -76,25 +76,33 @@ def save(save_file, content):
             pass
 
 
-def get_info(url):
+def get_info(url, keyword):
     try:
-        r = requests.get(url, headers={'UserAgent': user_agent}, timeout=TIMEOUT_HTTP, verify=False, allow_redirects=True)
-        
+        r = requests.get(url, headers={'UserAgent': user_agent}, timeout=TIMEOUT_HTTP, verify=False,
+                         allow_redirects=True)
+
         soup = BeautifulSoup(r.content, "lxml")
 
-        # HTTP的信息分析
-        info_code = "[" + red + str(r.status_code) + end + "]" 
-        info_title = " [" + blue + soup.title.string.replace('\n', '').replace('\r', '').replace('\t', '') + end + "]" if soup.title else " []"
+        # HTTP头信息分析
+        info_code = "[" + red + str(r.status_code) + end + "]"
+        info_title = " [" + blue + soup.title.string.replace('\n', '').replace('\r', '').replace('\t',
+                                                                                                 '') + end + "]" if soup.title else " []"
         info_len = " [" + purp + str(len(r.content)) + end + "]"
         if 'Server' in r.headers:
             info_server = " [" + yellow + r.headers['Server']
             info_server += " " + r.headers['X-Powered-By'] + end + "]" if 'X-Powered-By' in r.headers else "]"
         else:
             info_server = " []"
-                
-        return info_code + info_title + info_server + info_len
+
+        result = info_code + info_title + info_server + info_len
+
+        # HTTP内容，关键字匹配
+        key = " [Found]" if keyword and keyword in r.text else ""
+
+        return result + key
 
     except Exception as e:
+        # print(e)
         return "[" + green + "open" + end + "]"
 
 
@@ -116,11 +124,12 @@ def url_to_ip(url):
     非web端口：
         直接输出
 """
-async def connet(ip, sem):
+
+
+async def connet(ip, sem, keyword):
     global COUNT
     async with sem:
         for port in Ports:
-            #print(port)
             try:
                 fut = asyncio.open_connection(ip, port)
                 reader, writer = await asyncio.wait_for(fut, timeout=TIMEOUT_SOCK)
@@ -135,19 +144,19 @@ async def connet(ip, sem):
                     else:
                         protocol = "http" if port not in [443, 8443] else "https"
                         url = "{0}://{1}:{2}{3}".format(protocol, ip, port, PATH)
-                        info = get_info(url)
+                        info = get_info(url, keyword)
 
                     sys.stdout.write("%-28s %-30s\n" % (url, info))
                     COUNT += 1
 
             except Exception as e:
-                #print(e)
+                # print(e)
                 pass
-            
+
 
 async def connet2(url, sem):
     global COUNT
-
+    # ToDo
     url = url + PATH
     async with sem:
         ip, info = url_to_ip(url), get_info(url)
@@ -161,7 +170,7 @@ async def connet2(url, sem):
             pass
 
 
-async def scan(mode, x, t):
+async def scan(mode, x, t, keyword):
     time_start = time()
 
     # 加入信号量用于限制并发数
@@ -170,17 +179,13 @@ async def scan(mode, x, t):
     tasks = []
 
     if mode == 'ips':
-        ips = [str(ip) for ip in IPNetwork(x)]     
+        ips = [str(ip) for ip in IPNetwork(x)]
         for ip in ips:
-            tasks.append(asyncio.create_task(connet(ip, sem)))
+            tasks.append(asyncio.create_task(connet(ip, sem, keyword)))
         await asyncio.wait(tasks)
 
     '''
     文件格式支持ip、域名
-    1.1.1.1:80
-    baidu.com:443
-    http:/1.1.1.1
-    http://www.baidu.com
     '''
     if mode == 'file':
         with open(x, 'r') as f:
@@ -189,7 +194,7 @@ async def scan(mode, x, t):
                 if len(line) != 0:
                     url = line if '://' in line else 'http://' + line
                     tasks.append(asyncio.create_task(connet2(url, sem)))
-                    
+
         await asyncio.wait(tasks)
 
     print(blue + "\nFound {0} in {1} seconds\n".format(COUNT, time() - time_start))
@@ -209,25 +214,22 @@ def main():
                         help="Use ip or domain file")
     parser.add_argument("-t", dest="threads", type=int, default=60,
                         help="Set thread (default 60)")
-    #parser.add_argument("-o", dest="output",
+    # parser.add_argument("-o", dest="output",
     #                    help="Specify output file default output.txt")
     parser.add_argument("-q", dest="silent", action="store_true",
                         help="Silent mode")
     parser.add_argument("-web", dest="web", action="store_true",
-                        help="Only web ports")
+                        help="Only scan web ports")
     parser.add_argument("-path", dest="path",
                         help="Request path (example '/phpinfo.php')")
+    parser.add_argument("-k", dest="keyword", help="Specify keyword")
 
     args = parser.parse_args()
 
-    if args.web is True:
-        Ports = Ports_web
-    else:
-        Ports = Ports_web + Ports_other
+    Ports = Ports_web if args.web else Ports_web + Ports_other
 
     if args.silent is False:
         banner()
-        #print(yellow + "Scan Port " + blue + str(Ports))
 
     if args.ips is None and args.file is None:
         print(red + "[x] cscan -h" + end)
@@ -237,14 +239,17 @@ def main():
         PATH = args.path
 
     if args.ips:
-        print(yellow + 'Target: ' + blue + args.ips + purp + ' | ' + yellow + 'Threads: ' + blue + str(args.threads) + end + '\n')
+        print(yellow + 'Target: ' + blue + args.ips + purp + ' | ' + yellow + 'Threads: ' + blue + str(
+            args.threads) + end)
+        print(yellow + 'Ports: ' + blue + str(Ports) + end + '\n')
         try:
-            asyncio.run(scan('ips', args.ips, args.threads))
+            asyncio.run(scan('ips', args.ips, args.threads, args.keyword))
         except KeyboardInterrupt:
             print(red + "\nCTRL+C detected, Exit..." + end)
-        
+
     if args.file:
-        print(yellow + 'Target: ' + blue + args.file + purp + ' | ' + yellow + 'Threads: ' + blue + str(args.threads) + end + '\n')
+        print(yellow + 'Target: ' + blue + args.file + purp + ' | ' + yellow + 'Threads: ' + blue + str(
+            args.threads) + end + '\n')
         try:
             asyncio.run(scan('file', args.file, args.threads))
         except KeyboardInterrupt:
