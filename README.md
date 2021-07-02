@@ -45,6 +45,15 @@ python3 cscanV2.py -f domain.txt -web -path /phpinfo.php
 
 
 ## 4. ChangeLog
+#### 2.2.0
+- 添加`-key`匹配关键内容
+- 添加`-ip` 输出目标IP
+- 添加`-port` 指定自定义端口
+- 优化了文件模式输出
+
+#### 2.1.1
+- 修复了一些bug
+
 #### v2.1.0 
 - 增加`-path`指定路径扫描
 - 增加`-web`只扫描web端口
