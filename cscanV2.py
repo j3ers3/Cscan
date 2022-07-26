@@ -22,7 +22,7 @@ Ports_web = [80, 88, 443, 7001, 8000, 8008, 8888, 8080, 8088, 8089, 8161, 9090]
 Ports_other = [21, 22, 445, 1100, 1433, 1434, 1521, 3306, 3389, 6379, 8009, 9200, 11211, 27017, 50070]
 
 COUNT = 0
-TIMEOUT_HTTP = 5
+TIMEOUT_HTTP = 6
 TIMEOUT_SOCK = 0.9
 PATH = ''
 
@@ -100,17 +100,30 @@ def get_info(url, keyword):
         # HTTP头信息分析
         info_code = tag(red + str(r.status_code) + end)
         info_title = tag(blue + soup.title.string.replace('\n', '').replace('\r', '').replace('\t',
-                                                                                              '') + end) if soup.title else tag(
+                                                                                              '') + end) if soup.title.string else tag(
             "")
 
         info_len = tag(purp + str(len(r.content)) + end)
+        info_server, info_shiro = "", ""
+
+        info_jenkins = " [jenkins " + r.headers['X-Jenkins'] + end + "]"  if 'X-Jenkins' in r.headers else ""
+
         if 'Server' in r.headers:
             info_server = " [" + yellow + r.headers['Server']
             info_server += " " + r.headers['X-Powered-By'] + end + "]" if 'X-Powered-By' in r.headers else "]"
+        
+        
+
+        if 'Set-Cookie' in r.headers:
+            info_shiro = "[Shiro]" if 'rememberMe=deleteMe' in r.headers['Set-Cookie'] else ""
+
+        
+
         else:
             info_server = tag("")
+        
 
-        result = info_code + info_title + info_server + info_len
+        result = info_code + info_title + info_server + info_jenkins + info_shiro + info_len
 
         # HTTP内容，关键字匹配
         key = tag(red + "Keyword!!!" + end) if keyword and keyword in r.text else ""
@@ -118,7 +131,7 @@ def get_info(url, keyword):
         return result + key
 
     except Exception as e:
-        # print(e)
+        #print(e)
         return tag(green + "open" + end)
 
 
@@ -169,7 +182,11 @@ async def scan(mode, x, t, keyword, myip):
 
     # IP模式：10.1.1.1/24
     if mode == 'ips':
-        ips = [str(ip) for ip in IPNetwork(x)]
+        try:
+            ips = [str(ip) for ip in IPNetwork(x)]
+        except Exception as e:
+            print("[x] 请指定ip段")
+            exit(1)
         for host in ips:
             tasks.append(asyncio.create_task(connet(host, sem, keyword, myip)))
 
@@ -218,7 +235,7 @@ def main():
     args = parser.parse_args()
 
     # 指定 -web 参数情况下
-    Ports = Ports_web if args.web else Ports_web + Ports_other
+    Ports = Ports_web if args.web else [*Ports_web, *Ports_other]
 
     # 自定义端口
     if args.port:
